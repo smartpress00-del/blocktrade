@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans p-8">
+    <div class="max-w-2xl mx-auto space-y-6">
+        <h1 class="text-3xl font-bold border-b border-slate-700 pb-4">Crypto Dashboard</h1>
+
+        <!-- Market Info -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+            <h2 class="text-sm text-slate-400 uppercase tracking-wider">Live BTC Price</h2>
+            <div id="btcDisplay" class="text-4xl font-mono text-green-400 mt-1">Loading...</div>
+        </div>
+
+        <!-- Portfolio Stats -->
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-800 p-4 rounded-xl">
+                <p class="text-xs text-slate-400">USD Balance</p>
+                <p id="usdBalance" class="text-xl">$1,000.00</p>
+            </div>
+            <div class="bg-slate-800 p-4 rounded-xl">
+                <p class="text-xs text-slate-400">BTC Held</p>
+                <p id="btcBalance" class="text-xl">0.00000000</p>
+            </div>
+        </div>
+
+        <!-- Trading Terminal -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                <h3 class="font-semibold mb-4 text-green-500">Buy Bitcoin</h3>
+                <input id="buyAmount" type="number" placeholder="USD amount" class="w-full bg-slate-900 border border-slate-700 p-2 rounded mb-4 focus:outline-none focus:border-green-500">
+                <button onclick="trade('BUY')" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold transition">EXECUTE BUY</button>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                <h3 class="font-semibold mb-4 text-red-500">Sell Bitcoin</h3>
+                <input id="sellAmount" type="number" placeholder="BTC amount" class="w-full bg-slate-900 border border-slate-700 p-2 rounded mb-4 focus:outline-none focus:border-red-500">
+                <button onclick="trade('SELL')" class="w-full bg-red-600 hover:bg-red-700 py-2 rounded font-bold transition">EXECUTE SELL</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = JSON.parse(localStorage.getItem('crypto_sim')) || { usd: 1000, btc: 0 };
+        let currentPrice = 0;
+
+        // Fetch Live Price (CoinGecko API)
+        async function updatePrice() {
+            try {
+                const res = await fetch('https://api.coingecko.com');
+                const data = await res.json();
+                currentPrice = data.bitcoin.usd;
+                document.getElementById('btcDisplay').innerText = `$${currentPrice.toLocaleString()}`;
+                updateUI();
+            } catch (e) { console.error("Price fetch failed"); }
+        }
+
+        function updateUI() {
+            document.getElementById('usdBalance').innerText = `$${state.usd.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('btcBalance').innerText = state.btc.toFixed(8);
+            localStorage.setItem('crypto_sim', JSON.stringify(state));
+        }
+
+        function trade(type) {
+            const buyInput = document.getElementById('buyAmount');
+            const sellInput = document.getElementById('sellAmount');
+            
+            if (type === 'BUY') {
+                const val = parseFloat(buyInput.value);
+                if (val > 0 && val <= state.usd) {
+                    state.btc += val / currentPrice;
+                    state.usd -= val;
+                    buyInput.value = '';
+                }
+            } else {
+                const val = parseFloat(sellInput.value);
+                if (val > 0 && val <= state.btc) {
+                    state.usd += val * currentPrice;
+                    state.btc -= val;
+                    sellInput.value = '';
+                }
+            }
+            updateUI();
+        }
+
+        setInterval(updatePrice, 30000); // Update every 30s
+        updatePrice();
+    </script>
+</body>
+</html>
